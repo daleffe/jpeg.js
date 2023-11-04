@@ -43,21 +43,23 @@ var JPEGStream = (function(module) {
       return await response.text();
     }
 
+    async function takeSnapshot() {
+      const status = await getFrame();
+
+      if (status == true) {
+        if (self.onFrame) self.onFrame(self.img);
+      } else {
+        if (self.onError) self.onError(status);
+      }
+    }
+
     async function setRunning(running) {
       self.running = running;
 
       if (self.running) {
         if (self.onStart) self.onStart();
 
-        self.frameTimer = setInterval(async function() {
-          const status = await getFrame();
-
-          if (status == true) {
-            if (self.onFrame) self.onFrame(self.img);
-          } else {
-            if (self.onError) self.onError(status);
-          }
-        }, self.refreshRate);
+        self.frameTimer = setInterval(takeSnapshot, self.refreshRate);
       } else {
         if (self.onStop) self.onStop();
 
@@ -66,6 +68,7 @@ var JPEGStream = (function(module) {
       }
     }
 
+    self.snapshot = function() { takeSnapshot(); }
     self.start = function() { setRunning(true); }
     self.stop = function() { setRunning(false); }
   };
@@ -93,6 +96,7 @@ var JPEGStream = (function(module) {
 
     self.start = function() { self.stream.start(); }
     self.stop = function() { self.stream.stop(); }
+    self.snapshot = function() { self.stream.snapshot(); }
   };
 
   return module;
