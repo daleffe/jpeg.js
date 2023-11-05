@@ -40,7 +40,7 @@ var JPEGStream = (function(module) {
         }
       }
 
-      return await response.text();
+      return JSON.stringify({status: response.status, body: await response.text()});
     }
 
     async function takeSnapshot() {
