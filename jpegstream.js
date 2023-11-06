@@ -40,16 +40,21 @@ var JPEGStream = (function(module) {
         }
       }
 
-      return JSON.stringify({status: response.status, body: await response.text()});
+      return JSON.stringify({status: response.status, message: await response.text()});
     }
 
     async function takeSnapshot() {
-      const status = await getFrame();
+      try {
+        const status = await getFrame();
 
-      if (status == true) {
-        if (self.onFrame) self.onFrame(self.img);
-      } else {
-        if (self.onError) self.onError(status);
+        if (status == true) {
+          if (self.onFrame) self.onFrame(self.img);
+        } else {
+          if (self.onError) self.onError(status);
+        }
+      } catch (e) {
+        console.error("Crash!",e);
+        self.stop();
       }
     }
 
