@@ -14,81 +14,57 @@ var JPEGStream = (function(module) {
     self.onError = args.onError || null;
 
     self.refreshRate = args.refreshRate || 500;
-    self.timeout = args.timeout || 20000;
 
     self.running = false;
     self.frameTimer = 0;
 
     self.img = new Image();
 
-    function getFrame(isSnapshot = false) {
-      if (self.frameTimer != 0) clearInterval(self.frameTimer);
+    async function getFrame() {
+      const options = {method: 'GET', mode: 'cors',cache: 'no-store'}
 
-      const request = new XMLHttpRequest();
+      if ((typeof self.username === "string" || self.username instanceof String) && (typeof self.password === "string" || self.password instanceof String)) {
+        if (self.username.length > 0 && self.password.length > 0) options.headers = new Headers({Authorization: "Basic " + btoa(self.username + ':' + self.password)});
+      }
 
-      request.timeout = self.timeout;
-      request.responseType = 'arraybuffer';
+      const response = await fetch(self.url, options)
 
-      request.onreadystatechange = function() {
-        if (request.readyState == 4) {
-          try {
-            if (request.status == 200) {
-              if (request.getResponseHeader('content-type').startsWith('image/')) {
-                self.img.src = URL.createObjectURL(new Blob([request.response], { type: request.getResponseHeader('content-type') }));
+      if (response.ok) {
+        if (response.headers.get("Content-Type").startsWith('image')) {
+          const blob = await response.blob();
+          const objectURL = URL.createObjectURL(blob);
 
-                self.onFrame(self.img);
+          self.img.src = objectURL;
 
-                if (self.refreshRate > 0 && !isSnapshot) self.frameTimer = setInterval(getFrame, self.refreshRate);
-
-                return;
-              }
-            }
-
-            var charset = "utf-8";
-            var text = "";
-            var contentType = request.getResponseHeader('content-type');
-
-            if (contentType) {
-              const contentType = contentType.toLowerCase().split(';',2).map(function(item) {
-                return item.trim();
-              });
-
-              if (contentType[1] !== undefined) if (contentType[1].startsWith("charset=")) charset = contentType[1].replace("charset=","");
-
-              if (contentType[0].includes("text") || contentType.includes("json") || contentType[1].includes("xml")) {
-                text = new TextDecoder(charset).decode(request.response);
-              }
-            }
-
-            self.onError(JSON.stringify({status: request.status, message: text}));
-          } catch (e) {
-            self.onError(JSON.stringify({status: -1, message: JSON.stringify(e)}));
-          }
+          return true;
         }
       }
 
+      return JSON.stringify({status: response.status, message: await response.text()});
+    }
+
+    async function takeSnapshot() {
       try {
-        request.open("GET",self.url,true);
-        if ((typeof self.username === "string" || self.username instanceof String) && (typeof self.password === "string" || self.password instanceof String)) {
-          if (self.username.length > 0 && self.password.length > 0) request.setRequestHeader("Authorization","Basic " + btoa(self.username + ':' + self.password));
+        const status = await getFrame();
+
+        if (status == true) {
+          if (self.onFrame) self.onFrame(self.img);
+        } else {
+          if (self.onError) self.onError(status);
         }
-        request.send(null);
       } catch (e) {
-        self.onError(JSON.stringify({status: -2, message: JSON.stringify(e)}));
+        console.error("Crash!",e);
+        self.stop();
       }
     }
 
-    function takeSnapshot() {
-      getFrame(true);
-    }
-
-    function setRunning(running) {
+    async function setRunning(running) {
       self.running = running;
 
       if (self.running) {
         if (self.onStart) self.onStart();
 
-        if (self.frameTimer == 0) getFrame();
+        self.frameTimer = setInterval(takeSnapshot, self.refreshRate);
       } else {
         if (self.onStop) self.onStop();
 

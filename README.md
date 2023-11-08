@@ -10,14 +10,14 @@ New features and bugfixes will be available in [this version](https://github.com
 
 ## How to use
 
-Add the *jpegstream.js* script to your HTML page:
+Add the *jpeg.js* script to your HTML page:
 ```html
-<script src="jpegstream.js"></script>
+<script src="jpeg.js"></script>
 ```
 
-Create the player and set connection parameters/events:
+Create the player and set connection parameters/events as needed:
 ```javascript
-var player = new JPEGStream.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onError:  onErr, onStart: onStarted, onStop: onStopped});
+var player = new JPEG.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onError:  onErr, onStart: onStarted, onStop: onStopped});
 ```
 Parameters available:
 1. container element
@@ -25,7 +25,10 @@ Parameters available:
 3. Username (_optional_)
 4. Password (_optional_)
 5. Options
-* Timeout (_for XMLHttpRequest version_)
+* Image class
+* Image alternative text
+* Image title
+* Timeout (_in ms_)
 * Refresh Rate
 * Events (_see below_)
 
@@ -35,36 +38,38 @@ Parameters available:
 * _snapshot()_
 
 ### **start()**
-Starts sequential image capture:
+Start sequential capture:
 ```javascript
-var player = new JPEGStream.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onStart: onStarted});
+var player = new JPEG.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onStart: onStarted});
 player.start();
 ```
 
 ### **stop()**
-Stops sequential image capture:
+Stop sequential capture or abort current connection:
 ```javascript
-var player = new JPEGStream.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onStop: onStopped});
+var player = new JPEG.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onStop: onStopped});
 player.stop();
 ```
 
 ### **snapshot()**
 Take snapshot:
 ```javascript
-var player = new JPEGStream.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onError:  onErr, onStart: onStarted, onStop: onStopped});
+var player = new JPEG.Player("player", "http://<address>:<port>/<path>", "<username>", "<password>", {onError:  onErr, onStart: onStarted, onStop: onStopped});
 player.snapshot();
 ```
 
 ## Events
-Events are assigned upon object creation:
+Events are assigned at object creation:
 * **onStart**
 * **onStop**
 * **onError**(_JSON_)
-  * _JSON_: Displays the returned text in the request body.
+  * _JSON_: Displays the returned status code and request body text.
+* **onFrame**
+ * _event_: Event triggered by ***<img>*** onload.
 
 ```javascript
-function onErr(json) {
-  console.error(json);
+function onErr(text) {
+  console.error(text);
   player.stop();
 }
 
@@ -74,5 +79,12 @@ function onStarted() {
 
 function onStopped() {
   console.warn('Stopped');
+}
+
+function onFrame(e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  console.log('New frame',e);
 }
 ```
